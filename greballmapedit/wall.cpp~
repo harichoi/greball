@@ -1,0 +1,16 @@
+#include <QRect>
+#include "wall.h"
+
+CWALL::CWALL()
+{
+type=0;
+}
+
+
+CWALL::CWALL(int x1,int y1,int width1,int height1)
+{
+setX(x1);
+setY(y1);
+setWidth(width1);
+setHeight(height1);
+}

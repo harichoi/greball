@@ -1,0 +1,602 @@
+#include <QApplication>
+#include <QTimer>
+#include <QTime>
+#include <QPaintEvent>
+#include <QPainter>
+#include <stdlib.h>
+#include <math.h>
+#include "playwidget.h"
+#define G 800
+#define MAXPOWER player[k].maxpower
+#define APOWER player[k].apower
+#define JUMPPOWER player[k].jumppower
+#define ROPEBASE player[k].ropebase
+#define ROPEK player[k].ropek
+#define ROPELENGTH player[k].ropemlength
+#define ROPESPEED player[k].ropespeed
+#define YUCHE 0.000001
+#define nowx ((QCursor::pos().x())-wx+gx)
+#define nowy ((QCursor::pos().y())-wy+gy)
+#define BOMBMAX 100
+#define RYUCHE 0.98
+#define GIZOON 0.1
+#define absol(a) (((a)>0)?(a):(-(a)))
+#define NORMAL 0
+#define DIE 1
+#define CANBR 2
+
+double folx,foly;
+double sx, sy;
+double fx,fy;
+bool finish;
+int flag;
+int NP=1;
+int splayer;
+int swall;
+/*
+char* itoa(int val, int base){
+	
+	static char buf[32] = {0};
+	
+	int i = 30;
+	
+	for(; val && i ; --i, val /= base)
+	
+		buf[i] = "0123456789abcdef"[val % base];
+	
+	return &buf[i+1];
+	
+}
+*/
+double atod(QChar *asc, int len)
+{
+    int ch, i;
+    double deci_int = 0.0, deci_fra = 0.0;
+
+ 
+
+// 정수부 변환
+    for(i = 0; i < len; i++) {
+        ch = asc[i].toAscii();
+        if(ch == '.') break;
+        if(ch >= 'a' && ch <= 'z') ch -= ('a' - 'A');
+        if(ch >= 'A') ch -= ('A' - '9' - 1);
+        ch -= '0';
+        if(ch < 0 || ch >= 10) continue;
+        deci_int = deci_int * 10 + ch;
+        }
+
+ 
+
+    if(asc[i] == '.')
+// 소수부 변환
+        for(i = len - 1; i >= 0; i--) {
+            ch = asc[i].toAscii();
+            if(ch == '.') break;
+            if(ch >= 'a' && ch <= 'z') ch -= ('a' - 'A');
+            if(ch >= 'A') ch -= ('A' - '9' - 1);
+            ch -= '0';
+            if(ch < 0 || ch >= 10) continue;
+            deci_fra = (deci_fra + ch) / 10;
+            }
+    return deci_int + deci_fra;
+}
+char * qtoc(QChar *asc, int len)
+{
+int i;
+    char *result=new char[len+2];
+	sprintf(result,"");
+	for(i=0 ; i<len ; i++)
+            result[i] = asc[i].toAscii();
+	result[len]=0;
+	return result;
+}
+
+playwidget::playwidget()
+{
+int i;
+////////////널 세팅////////////
+gx=0;gy=0;
+folx=0,foly=0;
+wx=0,wy=0;
+WALL=1;
+wall=new CWALL[1000];
+player=new PLAYER[100];
+for(i=0 ; i<256 ; i++)
+	keyboard[i]=0;
+
+
+////////////타임 세팅/////////////////
+
+timer=new QTimer();
+timer->start(50);
+time=new QTime();
+time->start();
+connect(timer,SIGNAL(timeout()),this,SLOT(timefuc()));
+resize(800,600);
+}
+
+void playwidget::timefuc()
+{
+/////////////변수 선언//////////////
+int i, iswall, jump, k;
+
+////////////기준///////////////////
+////////////타임 셋팅///////////////
+double T=time->elapsed()/1000.0;
+T=T;
+time->start();
+gx+=(folx-gx)*GIZOON;
+gy+=(foly-gy)*GIZOON;
+
+///////////////키보드처리///////////
+if(keyboard['S']) foly+=500*T;
+if(keyboard['D']) folx+=500*T;
+if(keyboard['A']) folx-=500*T;
+if(keyboard['W']) foly-=500*T;
+
+if(keyboard['Z'])
+{
+WALL--;
+keyboard['Z']=0;
+}
+if(keyboard['Y'])
+{
+WALL++;
+keyboard['Y']=0;
+}
+if(keyboard['0'])
+flag=0;
+if(keyboard['1'])
+flag=1;
+if(keyboard['2'])
+flag=2;
+if(keyboard['3'])
+flag=3;
+if(keyboard['4'])
+flag=4;
+if(keyboard['5'])
+flag=5;
+if(keyboard['6'])
+flag=6;
+if(keyboard['7'])
+flag=7;
+if(keyboard['8'])
+flag=8;
+if(keyboard['9'])
+flag=9;
+//////////////기초셋팅//////////////
+iswall=0;
+
+if(finish)
+{
+finish=0;
+if(sx>fx)
+{
+double temp=fx;
+fx=sx;
+sx=temp;
+}
+if(sy>fy)
+{
+double temp=fy;
+fy=sy;
+sy=temp;
+}
+wall[swall]=CWALL((sx+fx)/2,(sy+fy)/2,fx-sx,fy-sy,0);
+swall=WALL;
+WALL++;
+showwall();
+}
+
+///////////업데이트/////////////////
+update();
+}
+int ee;
+void playwidget::paintEvent(QPaintEvent *a)
+{
+	int i, k;
+	QPainter pa(this);
+//////////////Bg Print///////////////////////////////
+
+	pa.setBrush(QBrush("#6666ff",Qt::SolidPattern));
+	pa.drawRect(0,0,1024,768);
+QPixmap pix2("sun.gif");
+pa.drawPixmap(-gx/40,-gy/40,pix2);
+QPixmap pix3("back.gif");
+pa.drawPixmap(-gx/10,-gy/10,pix3);
+QPixmap pix("map1.gif");
+pa.drawPixmap(-gx,-gy,pix);
+
+//if(fflag==0){
+/////////////////////WALL Draw//////////////////
+if(fflag==0){
+	pa.setBrush(Qt::white);
+	pa.drawRect(QRect(wall[swall].x()-wall[swall].width()/2-gx-5,wall[swall].y()-wall[swall].height()/2-gy-5,wall[swall].width()+10,wall[swall].height()+10));
+	pa.setPen(Qt::blue);
+	pa.setBrush(Qt::NoBrush);
+	pa.drawRect(sx-gx,sy-gy,fx-sx,fy-sy);
+}
+	pa.setPen(Qt::NoPen);
+	for(i=0 ; i<WALL ; i++)
+	{
+		if(wall[i].x()-wall[i].width()/2-gx>1024)
+			continue;
+		if(wall[i].x()+wall[i].width()/2-gx<0)
+			continue;
+		if(wall[i].y()-wall[i].height()/2-gy>768)
+			continue;
+		if(wall[i].y()+wall[i].height()/2-gy<0)
+			continue;
+		
+	if(wall[i].type==NORMAL)
+	pa.setBrush(Qt::green);
+	else if(wall[i].type==DIE)
+	pa.setBrush(QBrush("#ff7777",Qt::SolidPattern));
+	else if(wall[i].type==CANBR)
+	pa.setBrush(Qt::yellow);
+	pa.drawRect(QRect(wall[i].x()-wall[i].width()/2-gx,wall[i].y()-wall[i].height()/2-gy,wall[i].width(),wall[i].height()));
+	}
+	pa.setPen(Qt::black);
+	pa.setBrush(QBrush("#6666ff",Qt::SolidPattern));
+	pa.drawRect(0,0,100,100);
+	gx-=45*50;
+	gy-=45*50;
+	for(i=0 ; i<WALL ; i++)
+	{
+	if(wall[i].type==NORMAL)
+	pa.setBrush(Qt::black);
+	else if(wall[i].type==DIE)
+	pa.setBrush(Qt::red);
+	else if(wall[i].type==CANBR)
+	pa.setBrush(Qt::yellow);
+	int ppx,ppy;
+	ppx=(wall[i].x()-gx)/50;
+	ppy=(wall[i].y()-gy)/50;
+	if(ppx<100 && ppy<100 && ppx>0 && ppy>0)
+	{
+	pa.drawRect(QRect((wall[i].x()-wall[i].width()/2-gx)/50,(wall[i].y()-wall[i].height()/2-gy)/50,(wall[i].width())/50,(wall[i].height())/50));
+	}
+	}
+	gx+=45*50;
+	gy+=45*50;
+//}
+//else if(fflag==1)
+//{
+if(fflag==1)
+{
+	pa.setBrush(Qt::white);
+	pa.drawEllipse(player[splayer].x-player[splayer].radius-gx-5,player[splayer].y-player[splayer].radius-gy-5,player[splayer].radius*2+10,player[splayer].radius*2+10);
+}
+for(k=0 ; k<NP ; k++){
+	pa.setPen(Qt::black);
+	pa.setBrush(Qt::yellow);
+	pa.drawEllipse(player[k].footx[0]-player[k].radius/2-gx, player[k].footy[0]-player[k].radius/2-gy,player[k].radius,player[k].radius);
+	
+	pa.setPen(Qt::black);
+	pa.setBrush(Qt::yellow);
+	pa.drawEllipse(player[k].x-player[k].radius-gx,player[k].y-player[k].radius-gy,player[k].radius*2,player[k].radius*2);
+
+	pa.setPen(Qt::black);
+	pa.setBrush(Qt::yellow);
+	pa.drawEllipse(player[k].footx[1]-player[k].radius/2-gx, player[k].footy[1]-player[k].radius/2-gy,player[k].radius,player[k].radius);
+
+
+		double ag=atan((player[k].mousey-player[k].y)/(player[k].mousex-player[k].x));
+
+		if(player[k].mousex-player[k].x<0)
+			ag+=3.141592;
+		double CR=player[k].radius*cos(ag);
+		double SR=player[k].radius*sin(ag);
+
+	pa.setBrush(Qt::black);
+	pa.drawEllipse(player[k].x+CR/5*4-player[k].radius/15-player[k].radius/5-gx,player[k].y-player[k].radius/2+SR/5-gy,player[k].radius/7.5,player[k].radius/5*3);
+	pa.drawEllipse(player[k].x+CR/5*4-player[k].radius/15+player[k].radius/5-gx,player[k].y-player[k].radius/2+SR/5-gy,player[k].radius/7.5,player[k].radius/5*3);
+
+//}
+}
+/////////////////////////////////////////////////////
+
+}
+void playwidget::keyPressEvent(QKeyEvent *a)
+{
+	if(a->key()>255)
+		return;
+	keyboard[a->key()]=1;
+}
+
+void playwidget::keyReleaseEvent(QKeyEvent *a)
+{
+if(a->key()>255)
+return;
+	keyboard[a->key()]=0;
+}
+
+bool playwidget::canright(QRect rect,double xx, double yy,double xxx, double yyy, double rad)
+{
+return 1;
+}
+
+bool playwidget::canup(QRect rect,double xx, double yy,double xxx, double yyy, double rad)
+{
+return 1;
+}
+bool playwidget::candown(QRect rect,double xx, double yy,double xxx, double yyy, double rad)
+{
+return 1;
+}
+bool playwidget::canleft(QRect rect,double xx, double yy,double xxx, double yyy, double rad)
+{
+return 1;
+}
+
+void playwidget::mousePressEvent(QMouseEvent *a)
+{
+setFocus();
+wx=QCursor::pos().x()-a->x();
+wy=QCursor::pos().y()-a->y();
+
+if(fflag==0)
+{
+	sx=a->x()+gx;
+	sy=a->y()+gy;
+}
+if(fflag==1)
+{
+	player[splayer].x=a->x()+gx;
+	player[splayer].y=a->y()+gy;
+	showunit();
+}
+}
+
+
+void playwidget::mouseReleaseEvent(QMouseEvent *a)
+{
+if(fflag==0)
+{
+	fx=a->x()+gx;
+	fy=a->y()+gy;
+	finish=1;
+}
+}
+
+
+void playwidget::mouseMoveEvent(QMouseEvent *a)
+{
+	fx=a->x()+gx;
+	fy=a->y()+gy;
+}
+
+bool playwidget::isin(QRect rect,double xx,double yy)
+{
+}
+
+
+
+bool playwidget::iscrush(double xx,double yy, double xxx, double yyy, double rad)
+{
+}
+
+void playwidget::AI(int num,double T)
+{
+}
+
+
+
+void playwidget::b1click()
+{
+fflag=1;
+setFocus();
+}
+void playwidget::b2click()
+{
+setFocus();
+}
+void playwidget::b3click()
+{
+setFocus();
+}
+void playwidget::b4click()
+{
+fileload();
+setFocus();
+}
+void playwidget::b5click()
+{
+fflag=0;
+setFocus();
+}
+void playwidget::b6click()
+{
+setFocus();
+}
+void playwidget::b7click()
+{
+setFocus();
+}
+void playwidget::b8click()
+{
+filesave();
+setFocus();
+}
+void playwidget::ub1click()
+{
+//이전
+saveunit();
+if(splayer<=0)
+return;
+splayer--;
+showunit();
+setFocus();
+}
+void playwidget::ub2click()
+{
+setFocus();
+}
+void playwidget::ub3click()
+{
+//다음
+saveunit();
+splayer++;
+if(splayer==NP)
+NP++;
+showunit();
+setFocus();
+}
+void playwidget::ub4click()
+{
+int i;
+//삭제
+if(NP<=1)
+return;
+for(i=splayer ; i<NP ; i++)
+{
+player[i]=player[i+1];
+}
+NP--;
+if(splayer>=NP)
+{
+	splayer=NP-1;
+}
+showunit();
+setFocus();
+}
+void playwidget::wb1click()
+{
+if(swall<=0)
+return;
+swall--;
+showwall();
+setFocus();
+}
+void playwidget::wb2click()
+{
+swall++;
+if(swall>=WALL)
+WALL++;
+showwall();
+setFocus();
+}
+void playwidget::wb3click()
+{
+int i;
+//삭제
+if(WALL<=1)
+return;
+for(i=swall ; i<WALL ; i++)
+{
+wall[i]=wall[i+1];
+}
+WALL--;
+if(swall>=WALL)
+{
+	swall=WALL-1;
+}
+showwall();
+setFocus();
+}
+
+
+void playwidget::showunit()
+{
+PLAYER p=player[splayer];
+char str[256];
+QString a;
+a.sprintf("<%d/%d Unit>",splayer+1,NP);
+ubase->setText(a);
+
+sprintf(str,"%lf",p.maxpower); uline[1]->setText(str);
+sprintf(str,"%lf",p.apower); uline[2]->setText(str);
+sprintf(str,"%lf",p.jumppower); uline[3]->setText(str);
+sprintf(str,"%lf",p.ropek); uline[4]->setText(str);
+sprintf(str,"%lf",p.ropemlength); uline[5]->setText(str);
+sprintf(str,"%lf",p.ropespeed); uline[6]->setText(str);
+sprintf(str,"%lf",p.ropebase); uline[7]->setText(str);
+sprintf(str,"%lf",p.radius); uline[8]->setText(str);
+sprintf(str,"%s",p.filename); uline[9]->setText(str);
+sprintf(str,"%lf",p.energy); uline[10]->setText(str);
+sprintf(str,"%lf",p.mass); uline[11]->setText(str);
+sprintf(str,"%s",p.name); uline[12]->setText(str);
+sprintf(str,"%d",p.head); uline[13]->setText(str);
+}
+
+void playwidget::showwall()
+{
+char str[256];
+QString a;
+a.sprintf("<%d/%d wall>",swall+1,WALL);
+wbase->setText(a);
+}
+
+void playwidget::saveunit()
+{
+PLAYER *p=&player[splayer];
+char str[256];
+
+//sprintf(str,"%s",uline[1]->text(),);
+p->maxpower=atod(uline[1]->text().data(),uline[1]->text().length());
+p->apower=atod(uline[2]->text().data(),uline[2]->text().length());
+p->jumppower=atod(uline[3]->text().data(),uline[3]->text().length());
+p->ropek=atod(uline[4]->text().data(),uline[4]->text().length());
+p->ropemlength=atod(uline[5]->text().data(),uline[5]->text().length());
+p->ropespeed=atod(uline[6]->text().data(),uline[6]->text().length());
+p->ropebase=atod(uline[7]->text().data(),uline[7]->text().length());
+p->radius=atod(uline[8]->text().data(),uline[8]->text().length());
+sprintf(p->filename,"%s",qtoc(uline[9]->text().data(),uline[9]->text().length()));
+if(strstr(p->filename,".")) p->isimage=1;
+else p->isimage=0;
+p->energy=atod(uline[10]->text().data(),uline[10]->text().length());
+p->mass=atod(uline[11]->text().data(),uline[11]->text().length());
+sprintf(p->name,"%s",qtoc(uline[12]->text().data(),uline[12]->text().length()));
+p->head=atod(uline[13]->text().data(),uline[13]->text().length());
+}
+
+void playwidget::savewall()
+{
+}
+
+void playwidget::filesave()
+{
+saveunit();
+savewall();
+FILE *file=fopen("greball.txt","wb");
+int sztu,sztw;
+sztu=sizeof(PLAYER);
+sztw=sizeof(CWALL);
+fwrite(&NP,sizeof(int),1,file);
+fwrite(&WALL,sizeof(int),1,file);
+fwrite(&placerandom,sizeof(bool),1,file);
+fwrite(&sztu,sizeof(int),1,file);
+fwrite(&sztw,sizeof(int),1,file);
+fwrite(mapfile,sizeof(char),256,file);
+fwrite(player,sztu,NP,file);
+fwrite(wall,sztw,WALL,file);
+fclose(file);
+}
+/*
+n유닛
+n벽
+위치랜덤(bool)
+sizeof(유닛)
+sizeof(벽)
+맵파일명(str[256])
+유닛
+벽
+*/
+
+void playwidget::fileload()
+{
+FILE *file=fopen("greball.txt","rb");
+int sztu,sztw;
+fread(&NP,sizeof(int),1,file);
+fread(&WALL,sizeof(int),1,file);
+fread(&placerandom,sizeof(bool),1,file);
+fread(&sztu,sizeof(int),1,file);
+fread(&sztw,sizeof(int),1,file);
+fread(mapfile,sizeof(char),256,file);
+fread(player,sztu,NP,file);
+fread(wall,sztw,WALL,file);
+fclose(file);
+showwall();
+showunit();
+}

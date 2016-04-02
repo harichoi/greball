@@ -1,0 +1,16 @@
+
+class COMPOINT
+{
+public:
+COMPOINT()
+{
+a1=0.4;
+_a1=0.3;
+time=20;
+}
+double a1;
+double _a1;
+double firsta1;
+double time;
+double bpoint;
+};

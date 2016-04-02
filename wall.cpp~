@@ -1,0 +1,35 @@
+#include <QRect>
+#include "wall.h"
+
+CWALL::CWALL()
+{
+type=0;
+}
+
+
+CWALL::CWALL(int x1,int y1,int width1,int height1, int type1)
+{
+setX(x1);
+setY(y1);
+setWidth(width1);
+setHeight(height1);
+type=type1;
+}
+
+
+int bot()
+{
+return y()+height()/2;
+}
+int ri()
+{
+return x()+width()/2;
+}
+int le()
+{
+return x()-width()/2;
+}
+int top()
+{
+return y()-height()/2;
+}

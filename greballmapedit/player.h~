@@ -1,0 +1,74 @@
+class AAI
+{
+public : 
+AAI();
+void setting(CWALL *wall,int WALL);
+int basemap[1000][1000];
+double deltax,deltay;
+int target;
+int si;
+int fi;
+int order[100];
+double ordertime[100];
+double temp1[100];
+double temp2[100];
+int temp3[100];
+int giveflag;
+int comflag;
+int nowflag;
+int lastwall;
+double lasdis;
+double compoint;
+COMPOINT cpoint;
+};
+
+class PLAYER
+{
+public:
+PLAYER();
+void userbasicsetting(double _energy,double _mass,double _force, char *_name);
+void usermovesetting(double _maxpower, double _apower, double _jumppower); 
+void userropesetting(double _ropek, double _ropemlength, double _ropespeed);
+void ropesetup(double _mousex,double _mousey);
+void mouse(double _mousex,double _mousey);
+bool isropeing();
+int number;
+double maxpower,apower,jumppower;
+double ropebase, ropek, ropemlength, ropespeed;
+double x;
+double y;
+double mass;
+double energy;
+double willenergy;
+double vx;
+double vy;
+double footx[2];
+double footy[2];
+double footvx[2];
+double footvy[2];
+int bombtype;
+bool isimage;
+char filename[256];
+double bombdelay;
+bool ccl,ccr,ccu,ccd;
+double lccl,lccr,lccu,lccd;
+int nccl,nccr,nccu,nccd;
+char name[256];
+int width, height;
+double radius;
+double mousex,mousey;
+double ropex,ropey;
+double ropelength;
+int ropeflag;
+bool keyboard[256];
+int having;
+bool openmouse, openrope;
+/////////computer/////////////
+AAI *ai;
+void AIUPWALL(CWALL wall,bool right);
+void com(int orr,double orrtime,double t1,double t2);
+void comorder(double T);
+
+//임시함수//////
+bool jump;
+};
